@@ -1,0 +1,9 @@
+<p class="gray">language <b>detection</b>.</p>
+<form action="/language" method="post">
+    <label for="sample">Text Sample:</label> <br/>
+    <textarea id="sample" name="sample" placeholder="Language text.."></textarea> <br/>
+    <button type="submit"/> Match </button>
+    <p id="language">{{language}}</p>
+</form>
+<hr/>
+<p>Help <a href="/trainpage">train</a>, or <a href="/addpage">add</a> a language.</p>

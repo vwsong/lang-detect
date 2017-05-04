@@ -1,0 +1,12 @@
+<p class="gray"><b>add</b> another language!</p>
+<form action="/add" method="post">
+    <label for="name">Language:</label> <br/>
+    <input type="text" id="name" name="name" placeholder="Language name" /><br/> <br/>
+    <label for="name">Language family:</label> <br/>
+    <input type="text" id="family" name="family" placeholder="Family" /><br/> <br/>
+    <label for="sample">Text Sample:</label> <br/>
+    <textarea id="sample" name="sample" placeholder="Language text.."></textarea> <br/>
+    <button type="submit"/> Add language </button>
+    <p id="language">{{language}}</p>
+    <p>Play around with our language <a href="/detection">detection</a>, or help <a href="/trainpage">train</a> a model.</p>
+</form>

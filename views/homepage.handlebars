@@ -1,0 +1,62 @@
+<p class="gray">who needs google translate 👽</p>
+<input id="filter" type="text" placeholder="Search">
+<a id="update" href="/update">Update data</a> <br/> {{text}}
+<p>Help <a href="/trainpage">train</a>, play around with our language
+    <a href="/detection">detection</a>, or <a href="/addpage">add</a> a language.</p>
+    <hr/>
+{{#unless text}}
+    <table id="bigtable">
+        <tr class="header">
+            <td>Language</td>
+            <td>Version</td>
+            <td>Family</td>
+            <td>Original</td>
+            <td>Most common n-grams</td>
+        </tr>
+        <div id="lang-container">
+            {{#each data}}
+                <tr id="{{this.language}}">
+                    <td>{{this.language}}</td>
+                    <td>{{this.version}}</td>
+                    <td>{{this.category}}</td>
+                    <td>{{this.original}}</td>
+                    <td>
+                        {{#each this.profile}} {{this.ngram}}, {{/each}}
+                    </td>
+                </tr>
+            {{/each}}
+        </div>
+    </table>
+{{/unless}}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.js"></script>
+<script>
+    $("#filter").on("keyup", function() {
+        var language = $("#filter").val();
+        var table = document.getElementById('bigtable');
+        for (var i = 1, row; row = table.rows[i]; i++) {
+            var rowLang = row.id;
+            if (language == "") {
+                row.style.display = "table-row";
+            } else {
+                if (row.id.startsWith(language)) {
+                    row.style.display = "table-row";
+                } else {
+                    row.style.display = "none";
+                }
+            }
+        }
+        // $('#lang-container').find('tr').each(function() {
+        //     var rowLang = $(this).attr('id');
+        //     console.log(rowLang);
+        //     if(language == "") {
+        //         $(this).show();
+        //     } else {
+        //         if(rowLang.startsWith(language)) {
+        //             $(this).show();
+        //         } else {
+        //             $(this).hide();
+        //         }
+        //     }
+        // });
+    });
+</script>
