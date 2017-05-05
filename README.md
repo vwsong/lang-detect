@@ -66,7 +66,7 @@ var options = {
        name: "Chinese",
        category: "Sino-Tibetan", 
        origin: "Asia",
-       contributor: "Vincent Song
+       contributor: "Vincent Song"
     } 
 };
 
