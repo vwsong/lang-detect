@@ -93,5 +93,5 @@ Navigation Filters
 3. Indo-European -> `/filter/european`
 4. Romance -> `/filter/romance`
 5. Germanic -> `/filter/germanic`
-6. Other -> '/filter/other'
+6. Other -> `/filter/other`
 
