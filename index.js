@@ -13,7 +13,6 @@ var h = require('./helpers.js');
 dotenv.load();
 
 var app = express();
-var globalLanguages = {};
 
 app.use(logger('dev'));
 app.use(bodyParser.json());
@@ -31,178 +30,59 @@ app.use('/public', express.static('public'));
  * endpoints for the API, and 5 others.
  */
 
-app.get('/data', function(req, res) {
-    res.json(globalLanguages);
+app.get('/api/data', function(req, res) {
+    res.json(h.globalLanguages);
+});
+
+app.post('/api/language', function(req, res) {
+    var sample = req.body.sample;
+    h.langAPI(res, sample);
 });
 
 app.post('/language', function(req, res) {
-    if (req.body.sample.length > 900) {
-        Language.find({}, function(err, languages) {
-            if (err) throw err;
-            else {
-                let hiscore = 100000000000000000; //a really big number
-                var closestLang = "N/A";
-                for (let i = 0; i < languages.length; i++) {
-                    console.log(languages[i].language);
-                    var currentProfile = languages[i].profile;
-                    var sampleProfile = h.createProfile(req.body.sample);
-                    var newscore = h.calculateDifference(currentProfile, sampleProfile);
-                    console.log("newscore: " + newscore);
-                    console.log("hiscore: " + hiscore);
-                    if (hiscore > newscore) {
-                        hiscore = newscore;
-                        closestLang = languages[i].language;
-                    }
-                }
-
-                res.render('first', {
-                    language: closestLang
-                });
-            }
-        });
-    } else {
-        res.render('first', {
-            language: "Data size too small :("
-        });
-    }
+    var sample = req.body.sample;
+    h.lang(res, sample);
 });
 
-app.post('/train', function(req, res) {
+app.post("/api/add", function(req, res) {
     var data = req.body.sample + " ";
-    var language = req.body.name + "";
+    var language = req.body.name;
+    var category = req.body.family;
+    var origin = req.body.origin;
+    var contributor = req.body.contributor;
 
-    Language.find({
-        language: language
-    }, function(err, result) {
-        if (err) res.send("find messed up");
-        else if (result == undefined || result.length == 0) {
-            console.log(result);
-            res.render('train', {
-                language: "Language not found! :("
-            });
-        } else {
-            version = result[0].version + 1;
-            newData = h.createProfile(data);
-            oldData = result[0].profile;
-            category = result[0].category;
-            updatedData = h.processData(newData, oldData);
-
-            var addToGlobal = {
-                language: language,
-                size: updatedData.length,
-                version: version,
-                original: false,
-                category: category,
-                profile: updatedData
-            }
-
-            globalLanguages[language] = addToGlobal;
-
-            var lang = new Language({
-                language: language,
-                size: updatedData.length,
-                version: version,
-                original: false,
-                category: category,
-                profile: updatedData
-            });
-            Language.findOneAndRemove({
-                language: language
-            }, function(err, todo) {
-                lang.save(function(err) {
-                    if (err) console.log("Failed to push updated" + language + " data to MongoDB")
-                    else {
-                        console.log("Successfully pushed updated" + language + " data to MongoDB.");
-                    }
-                    res.render('train', {
-                        language: "Thanks for your contribution! :)"
-                    });
-                });
-            });
-        }
-    });
+    h.addAPI(res, data, language, category, origin, contributor);
 });
 
-function capitalize(s) {
-    return s[0].toUpperCase() + s.slice(1);
-}
+app.post("/api/train", function(req, res) {
+    var data = req.body.sample + " ";
+    var language = req.body.name;
+    var category = req.body.family;
+
+    h.trainAPI(res, data, language, category);
+});
+
+app.post("/train", function(req, res) {
+    var data = req.body.sample + " ";
+    var language = req.body.name;
+    var category = req.body.family;
+
+    h.train(res, data, language, category);
+});
 
 app.post("/add", function(req, res) {
     var data = req.body.sample + " ";
     var language = req.body.name;
     var category = req.body.family;
+    var origin = req.body.origin;
+    var contributor = req.body.contributor;
 
-    Language.find({
-        language: language
-    }, function(err, result) {
-        if (err) res.send("find messed up");
-        else if (result == undefined || result.length == 0) {
-            var newData = h.createProfile(data);
-
-            var lang = new Language({
-                language: language,
-                size: newData.length,
-                version: 0,
-                original: true,
-                category: category,
-                profile: newData
-            });
-
-            var addToGlobal = {
-                language: language,
-                size: newData.length,
-                version: 0,
-                original: true,
-                category: category,
-                profile: newData
-            };
-
-            lang.save(function(err) {
-                if (err) console.log("Failed to push updated " + language + " data to MongoDB")
-                else {
-                    globalLanguages[language] = addToGlobal;
-                    console.log("Successfully pushed new " + language + " data to MongoDB.");
-                }
-                res.render('addpage', {
-                    language: "Thanks for your contribution!"
-                });
-            });
-        } else {
-            res.render('addpage', {
-                language: "Language already exists! :("
-            });
-        }
-    });
-});
-
-app.get("/addpage", function(req, res) {
-    res.render('addpage');
-});
-
-app.get("/trainpage", function(req, res) {
-    res.render('train');
-});
-
-app.get("/detection", function(req, res) {
-    res.render('first');
-});
-
-app.get("/update", function(req, res) {
-    Language.find({}, function(err, languages) {
-        if (err) throw err;
-        else {
-            for (let i = 0; i < languages.length; i++) {
-                globalLanguages[languages[i].language] = languages[i];
-            }
-
-            res.redirect('/');
-        }
-    });
+    h.addLang(res, data, language, category, origin, contributor);
 });
 
 app.get('/filter/:filter', function(req, res) {
     var filter = req.params.filter;
-    var gCopy = h.limitProfiles(globalLanguages);
+    var gCopy = h.limitProfiles(h.globalLanguages);
     var final = {};
     if (filter == "asian") {
         _.mapObject(gCopy, function(item) {
@@ -254,8 +134,33 @@ app.get('/filter/:filter', function(req, res) {
     }
 });
 
+app.get("/addpage", function(req, res) {
+    res.render('addpage');
+});
+
+app.get("/trainpage", function(req, res) {
+    res.render('train');
+});
+
+app.get("/detection", function(req, res) {
+    res.render('first');
+});
+
+app.get("/update", function(req, res) {
+    Language.find({}, function(err, languages) {
+        if (err) throw err;
+        else {
+            for (let i = 0; i < languages.length; i++) {
+                h.globalLanguages[languages[i].language] = languages[i];
+            }
+
+            res.redirect('/');
+        }
+    });
+});
+
 app.get('/', function(req, res) {
-    gCopy = h.limitProfiles(globalLanguages);
+    gCopy = h.limitProfiles(h.globalLanguages);
 
     console.log(_.isEmpty(gCopy));
     if (!_.isEmpty(gCopy)) {
@@ -278,7 +183,7 @@ app.listen(3000, function() {
             console.log('MongoDB Connection Error. Please make sure that MongoDB is running.');
             process.exit(1);
         });
-        // h.initialLoad();
+        h.initialLoad();
     });
 
 });

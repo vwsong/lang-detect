@@ -11,6 +11,8 @@ var languageSchema = new mongoose.Schema({
     size: Number,
     original: Boolean,
     category: String,
+    origin: String,
+    contributor: String,
     profile: [profileSchema]
 });
 

@@ -9,6 +9,287 @@ var mongoose = require('mongoose');
 var dotenv = require('dotenv');
 var Language = require('./models/language.js');
 
+var globalLanguages = {};
+
+function lang(res, sample) {
+    if (sample.length > 700) {
+        Language.find({}, function(err, languages) {
+            if (err) throw err;
+            else {
+                let hiscore = 100000000000000000; //a really big number
+                var closestLang = "N/A";
+                for (let i = 0; i < languages.length; i++) {
+                    console.log(languages[i].language);
+                    var currentProfile = languages[i].profile;
+                    var sampleProfile = createProfile(sample);
+                    var newscore = calculateDifference(currentProfile, sampleProfile);
+                    console.log("newscore: " + newscore);
+                    console.log("hiscore: " + hiscore);
+                    if (hiscore > newscore) {
+                        hiscore = newscore;
+                        closestLang = languages[i].language;
+                    }
+                }
+
+                res.render('first', {
+                    language: closestLang
+                });
+            }
+        });
+    } else {
+        res.render('first', {
+            language: "Data size too small ☹️ "
+        });
+    }
+}
+
+function langAPI(res, sample) {
+    if (sample.length < 700) {
+        Language.find({}, function(err, languages) {
+            if (err) throw err;
+            else {
+                let hiscore = 100000000000000000; //a really big number
+                var closestLang = "N/A";
+                for (let i = 0; i < languages.length; i++) {
+                    console.log(languages[i].language);
+                    var currentProfile = languages[i].profile;
+                    var sampleProfile = createProfile(sample);
+                    var newscore = calculateDifference(currentProfile, sampleProfile);
+                    console.log("newscore: " + newscore);
+                    console.log("hiscore: " + hiscore);
+                    if (hiscore > newscore) {
+                        hiscore = newscore;
+                        closestLang = languages[i].language;
+                    }
+                }
+
+                res.json({
+                    language: closestLang
+                });
+            }
+        });
+    } else {
+        res.json({
+            language: "Data size too small ☹️ "
+        });
+    }
+}
+
+function trainAPI(res, data, language) {
+    Language.find({
+        language: language
+    }, function(err, result) {
+        if (err) res.send("find messed up");
+        else if (result == undefined || result.length == 0) {
+            console.log(result);
+            res.json({
+                language: "Language not found! ☹️ "
+            });
+        } else {
+            version = result[0].version + 1;
+            newData = createProfile(data);
+            oldData = result[0].profile;
+            category = result[0].category;
+            updatedData = processData(newData, oldData);
+
+            var addToGlobal = {
+                language: language,
+                size: updatedData.length,
+                version: version,
+                original: false,
+                category: category,
+                profile: updatedData
+            }
+
+            globalLanguages[language] = addToGlobal;
+
+            var lang = new Language({
+                language: language,
+                size: updatedData.length,
+                version: version,
+                original: false,
+                category: category,
+                profile: updatedData
+            });
+            Language.findOneAndRemove({
+                language: language
+            }, function(err, todo) {
+                lang.save(function(err) {
+                    if (err) console.log("Failed to push updated" + language + " data to MongoDB")
+                    else {
+                        console.log("Successfully pushed updated" + language + " data to MongoDB.");
+                    }
+                    res.json({
+                        language: "Thanks for your contribution! 🤑"
+                    });
+                });
+            });
+        }
+    });
+}
+
+function train(res, data, language) {
+    if (data.length < 700) {
+        res.render('train', {
+            language: "Data size is too small ☹️ "
+        });
+    } else {
+        Language.find({
+            language: language
+        }, function(err, result) {
+            if (err) res.send("find messed up");
+            else if (result == undefined || result.length == 0) {
+                console.log(result);
+                res.render('train', {
+                    language: "Language not found! ☹️ "
+                });
+            } else {
+                version = result[0].version + 1;
+                newData = createProfile(data);
+                oldData = result[0].profile;
+                category = result[0].category;
+                updatedData = processData(newData, oldData);
+
+                var addToGlobal = {
+                    language: language,
+                    size: updatedData.length,
+                    version: version,
+                    original: false,
+                    category: category,
+                    profile: updatedData
+                }
+
+                globalLanguages[language] = addToGlobal;
+
+                var lang = new Language({
+                    language: language,
+                    size: updatedData.length,
+                    version: version,
+                    original: false,
+                    category: category,
+                    profile: updatedData
+                });
+                Language.findOneAndRemove({
+                    language: language
+                }, function(err, todo) {
+                    lang.save(function(err) {
+                        if (err) console.log("Failed to push updated" + language + " data to MongoDB")
+                        else {
+                            console.log("Successfully pushed updated" + language + " data to MongoDB.");
+                        }
+                        res.render('train', {
+                            language: "Thanks for your contribution! 🤑"
+                        });
+                    });
+                });
+            }
+        });
+    }
+}
+
+function addAPI(res, data, language, category, origin, contributor) {
+    Language.find({
+        language: language
+    }, function(err, result) {
+        if (err) res.send("find messed up");
+        else if (result == undefined || result.length == 0) {
+            var newData = createProfile(data);
+
+            var lang = new Language({
+                language: language,
+                size: newData.length,
+                version: 0,
+                original: true,
+                category: category,
+                origin: origin,
+                contributor: contributor,
+                profile: newData
+            });
+
+            var addToGlobal = {
+                language: language,
+                size: newData.length,
+                version: 0,
+                original: true,
+                category: category,
+                origin: origin,
+                contributor: contributor,
+                profile: newData
+            };
+
+            lang.save(function(err) {
+                if (err) console.log("Failed to push updated " + language + " data to MongoDB")
+                else {
+                    globalLanguages[language] = addToGlobal;
+                    console.log("Successfully pushed new " + language + " data to MongoDB.");
+                }
+                res.json({
+                    language: "Thanks for your contribution! 🤑"
+                });
+            });
+        } else {
+            res.json({
+                language: "Language already exists! ☹️"
+            });
+        }
+    });
+}
+
+function addLang(res, data, language, category, origin, contributor) {
+    if (data.length < 700) {
+        res.render('addpage', {
+            language: "Data size is too small ☹️ "
+        });
+    } else {
+        Language.find({
+            language: language
+        }, function(err, result) {
+            if (err) res.send("find messed up");
+            else if (result == undefined || result.length == 0) {
+                var newData = createProfile(data);
+
+                var lang = new Language({
+                    language: language,
+                    size: newData.length,
+                    version: 0,
+                    original: true,
+                    origin: origin,
+                    contributor: contributor,
+                    category: category,
+                    profile: newData
+                });
+
+                var addToGlobal = {
+                    language: language,
+                    size: newData.length,
+                    version: 0,
+                    original: true,
+                    category: category,
+                    origin: origin,
+                    contributor: contributor,
+                    profile: newData
+                };
+
+                lang.save(function(err) {
+                    if (err) console.log("Failed to push updated " + language + " data to MongoDB")
+                    else {
+                        globalLanguages[language] = addToGlobal;
+                        console.log("Successfully pushed new " + language + " data to MongoDB.");
+                    }
+                    res.render('addpage', {
+                        language: "Thanks for your contribution! 🤑"
+                    });
+                });
+            } else {
+                res.render('addpage', {
+                    language: "Language already exists! ☹️"
+                });
+            }
+        });
+    }
+
+}
+
 function limitProfiles(globalCopy) {
     gCopy = globalCopy;
     _.mapObject(gCopy, function(v) {
@@ -111,19 +392,6 @@ function createProfile(data) {
 
     sorted = mapToSorted(engProfile);
 
-    // for (let key of engProfile.keys()) {
-    //     sorted.push({
-    //         ngram: key,
-    //         value: engProfile.get(key)
-    //     });
-    // }
-    //
-    // sorted.sort(function(a, b) {
-    //     if (a.value > b.value) return -1;
-    //     else if (a.value < b.value) return 1;
-    //     return 0;
-    // });
-
     return sorted;
 }
 
@@ -163,9 +431,9 @@ function initialLoad() {
         "hng.txt": "Uralic",
         "itn.txt": "Romance",
         "jpn.txt": "Japonic",
-        "lat.txt": "Latvian",
+        "lat.txt": "Indo-European",
         "lit.txt": "Indo-European",
-        "ltn.txt": "Latin",
+        "ltn.txt": "Romance",
         "lux.txt": "Indo-European",
         "mls.txt": "Afro-Asiatic",
         "por.txt": "Romance",
@@ -175,6 +443,30 @@ function initialLoad() {
         "spn.txt": "Romance",
         "ukr.txt": "Indo-European",
         "yps.txt": "Austronesian"
+    }
+    var langOrigin = {
+        "czc.txt": "Europe",
+        "dns.txt": "Europe",
+        "dut.txt": "Europe",
+        "eng.txt": "Europe",
+        "frn.txt": "Europe",
+        "ger.txt": "Europe",
+        "grk.txt": "Europe",
+        "hng.txt": "Europe",
+        "itn.txt": "Europe",
+        "jpn.txt": "Asia",
+        "lat.txt": "Europe",
+        "lit.txt": "Europe",
+        "ltn.txt": "Europe",
+        "lux.txt": "Europe",
+        "mls.txt": "Africa",
+        "por.txt": "Europe",
+        "rmn1.txt": "Europe",
+        "rum.txt": "Europe",
+        "rus.txt": "Europe",
+        "spn.txt": "Europe",
+        "ukr.txt": "Europe",
+        "yps.txt": "Asia"
     }
     fs.readdir("langs", 'utf8', (err, files) => {
         files.forEach(file => {
@@ -188,6 +480,8 @@ function initialLoad() {
                     version: 0,
                     original: true,
                     category: langCategory[file],
+                    origin: langOrigin[file],
+                    contributor: "Vincent Song",
                     profile: langData
                 });
 
@@ -201,11 +495,18 @@ function initialLoad() {
 }
 
 module.exports = {
+    langAPI: langAPI,
+    trainAPI: trainAPI,
+    lang: lang,
+    train: train,
+    addLang: addLang,
+    addAPI: addAPI,
     limitProfiles: limitProfiles,
     processData: processData,
     calculateDifference: calculateDifference,
     purifyString: purifyString,
     mapToSorted: mapToSorted,
     createProfile: createProfile,
-    initialLoad: initialLoad
+    initialLoad: initialLoad,
+    globalLanguages: globalLanguages
 };
